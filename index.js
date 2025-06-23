@@ -29,11 +29,42 @@ app.listen(PORT, () => {
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const channelsPath = path.join(__dirname, "data/channels.json");
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages] });
 client.commands = new Collection();
 
 const setChannelCommand = require("./commands/setChannel.js");
 client.commands.set(setChannelCommand.name, setChannelCommand);
+
+// Helper to read and write channels.json safely
+function getChannelsMap() {
+  if (!fs.existsSync(channelsPath)) return {};
+  try {
+    return JSON.parse(fs.readFileSync(channelsPath));
+  } catch {
+    return {};
+  }
+}
+function setChannelsMap(map) {
+  fs.writeFileSync(channelsPath, JSON.stringify(map, null, 2));
+}
+
+// When bot joins a new server, pick a default channel and store it
+client.on(Events.GuildCreate, async (guild) => {
+  // Find a text channel the bot can send messages in
+  const channel = guild.channels.cache.find(
+    (ch) =>
+      ch.type === 0 && // 0 = GuildText
+      ch.viewable &&
+      ch.permissionsFor(guild.members.me).has(["SendMessages", "ViewChannel"])
+  );
+  if (channel) {
+    const channelsMap = getChannelsMap();
+    channelsMap[guild.id] = channel.id;
+    setChannelsMap(channelsMap);
+    // Optionally send a welcome/news message
+    channel.send("🤖 Thanks for adding me! I'll post news here.");
+  }
+});
 
 client.once(Events.ClientReady, async () => {
   console.log(`🤖 Logged in as ${client.user.tag}`);
@@ -50,8 +81,8 @@ client.once(Events.ClientReady, async () => {
   console.log("✅ Slash commands registered.");
 
 
-  cron.schedule("* * * * *", async () => {
-    const newsByGuild = JSON.parse(fs.readFileSync(channelsPath));
+  cron.schedule("*/20 * * * *", async () => {
+    const newsByGuild = getChannelsMap();
     const articlesTech = await fetchNews("technology");
     const articlesWorld = await fetchNews("israel iran");
 
