@@ -26,7 +26,7 @@ app.listen(PORT, () => {
   console.log(`🌐 Web server running on port ${PORT}`);
 });
 
-// Discord + AI setup
+
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const channelsPath = path.join(__dirname, "data/channels.json");
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
@@ -49,8 +49,8 @@ client.once(Events.ClientReady, async () => {
   });
   console.log("✅ Slash commands registered.");
 
-  // Run every 30 minutes
-  cron.schedule("*/30 * * * *", async () => {
+
+  cron.schedule("* * * * *", async () => {
     const newsByGuild = JSON.parse(fs.readFileSync(channelsPath));
     const articlesTech = await fetchNews("technology");
     const articlesWorld = await fetchNews("israel iran");
