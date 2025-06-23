@@ -81,7 +81,7 @@ client.once(Events.ClientReady, async () => {
   console.log("✅ Slash commands registered.");
 
 
-  cron.schedule("*/20 * * * *", async () => {
+  cron.schedule("*/15 * * * *", async () => {
     const newsByGuild = getChannelsMap();
     const articlesTech = await fetchNews("technology");
     const articlesWorld = await fetchNews("israel iran");
@@ -89,8 +89,8 @@ client.once(Events.ClientReady, async () => {
     for (const [guildId, channelId] of Object.entries(newsByGuild)) {
       try {
         const channel = await client.channels.fetch(channelId);
-        await sendNews(articlesTech, "🧠 Tech News", channel);
-        await sendNews(articlesWorld, "🌍 Israel-Iran News", channel);
+        await sendNews(articlesTech, "🧠 Tech News", channel, guildId);
+        await sendNews(articlesWorld, "🌍 Israel-Iran News", channel, guildId);
       } catch (err) {
         console.error(`❌ Failed to post in guild ${guildId}: ${err.message}`);
       }
@@ -108,7 +108,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     console.error(error);
     await interaction.reply({
       content: "❌ Error executing command",
-      ephemeral: true,
+      flags: 64,
     });
   }
 });
@@ -153,13 +153,14 @@ const summarizeWithGemini = async (text) => {
   }
 };
 
-const postedUrls = new Set();
+const postedUrlsByGuild = {};
 
-const sendNews = async (articles, title, channel) => {
+const sendNews = async (articles, title, channel, guildId) => {
   if (!articles.length) return;
   const article = articles[0];
-  if (postedUrls.has(article.url)) return;
-  postedUrls.add(article.url);
+  if (!postedUrlsByGuild[guildId]) postedUrlsByGuild[guildId] = new Set();
+  if (postedUrlsByGuild[guildId].has(article.url)) return;
+  postedUrlsByGuild[guildId].add(article.url);
 
   const date = new Date(article.publishedAt);
   const formattedDate = date.toLocaleString("en-US", {
