@@ -1,4 +1,5 @@
 require("dotenv").config();
+const express = require("express");
 const {
   Client,
   GatewayIntentBits,
@@ -13,10 +14,19 @@ const path = require("path");
 const cron = require("node-cron");
 const axios = require("axios");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-const { config } = require("dotenv");
 
-config();
+const app = express();
+const PORT = process.env.PORT || 3000;
 
+app.get("/", (req, res) => {
+  res.send("🤖 Discord bot is running.");
+});
+
+app.listen(PORT, () => {
+  console.log(`🌐 Web server running on port ${PORT}`);
+});
+
+// Discord + AI setup
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const channelsPath = path.join(__dirname, "data/channels.json");
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
@@ -39,7 +49,8 @@ client.once(Events.ClientReady, async () => {
   });
   console.log("✅ Slash commands registered.");
 
-  cron.schedule('*/30 * * * *', async () => {
+  // Run every 30 minutes
+  cron.schedule("*/30 * * * *", async () => {
     const newsByGuild = JSON.parse(fs.readFileSync(channelsPath));
     const articlesTech = await fetchNews("technology");
     const articlesWorld = await fetchNews("israel iran");
@@ -74,9 +85,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 const fetchNews = async (query = "technology") => {
   const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(
     query
-  )}&sortBy=publishedAt&language=en&pageSize=1&apiKey=${
-    process.env.NEWS_API_KEY
-  }`;
+  )}&sortBy=publishedAt&language=en&pageSize=1&apiKey=${process.env.NEWS_API_KEY}`;
   const res = await axios.get(url);
   return res.data.articles;
 };
@@ -103,7 +112,6 @@ const summarizeWithGemini = async (text) => {
     };
 
     const response = await axios.post(GEMINI_API_URL, requestBody);
-
     const summary =
       response.data?.candidates?.[0]?.content?.parts?.[0]?.text || null;
 
