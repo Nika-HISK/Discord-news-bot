@@ -22,7 +22,7 @@ module.exports = {
       await interaction.reply({ content: `News will now be posted in <#${channel.id}>`, flags: 64 });
     } catch (error) {
       if (!interaction.replied && !interaction.deferred) {
-        await interaction.reply({ content: '❌ Error setting channel.', flags: 64 });
+        await interaction.reply({ content: 'Error setting channel.', flags: 64 });
       }
       console.error('setChannel error:', error);
     }
